@@ -1,0 +1,460 @@
+{
+  "name": "1337 project detector",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -496,
+        -48
+      ],
+      "id": "ced3bbbb-9683-40d9-a34c-aa64cbae1236",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://api.intra.42.fr/v2/users/YOUR_42_USER_ID/projects_users?filter[status]=finished&sort=-marked_at&page[size]=1",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -320,
+        48
+      ],
+      "id": "9dcf7558-02c4-45e2-b468-11c508499ea6",
+      "name": "HTTP Request",
+      "credentials": {
+        "oAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "42 OAuth2 credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the latest project from the HTTP Request node\nconst latestProject = $input.first().json;\nconst newMarkedAt = latestProject.marked_at;\n\n// Read the saved value\nconst data = $getWorkflowStaticData('global');\nconst lastMarkedAt = data.last_marked_at;\n\n// If same as last time, stop the workflow\nif (lastMarkedAt === newMarkedAt) {\n  return [];  // empty output = workflow stops here\n}\n\n// If new validation, save the new value and continue\ndata.last_marked_at = newMarkedAt;\n\n// Pass the project data to the next node\nreturn [\n  {\n    json: {\n      project_name: latestProject.project.name,\n      final_mark: latestProject.final_mark,\n      marked_at: newMarkedAt,\n      project_id: latestProject.project.id\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -80,
+        -64
+      ],
+      "id": "babdfc24-67d3-46ad-bfda-de75687c8275",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an expert LinkedIn content writer specialized in 42 school projects.\n\nYour task:\nGenerate a HIGH-QUALITY LinkedIn post based ONLY on the project name: {{$json.project_name}}.\n\n---\n\n📚 PROJECT KNOWLEDGE BASE:\n\nYou MUST match the project name and use the correct description below:\n\n1. Inception:\nA DevOps project focused on Docker and system administration. It consists of building a complete multi-container infrastructure using Docker Compose, including NGINX (with HTTPS), WordPress, and MariaDB. Each service runs in its own container, connected via a custom network, with volumes for persistence. It emphasizes security (no hardcoded passwords, use of .env), service orchestration, and real-world server architecture.\n\n2. Webserv:\nA C++98 project where you build a full HTTP server from scratch. It handles HTTP requests (GET, POST, DELETE), serves static files, supports CGI execution, manages file uploads, and parses configuration files similar to NGINX. It uses non-blocking I/O (poll/select) to handle multiple clients efficiently and deeply explores networking, sockets, and the HTTP protocol.\n\n3. ft_transcendence:\nA full-stack web application project where you build a real-time multiplayer platform (usually a Pong game). It includes frontend, backend, authentication, database, user system, chat, friends, and real-time gameplay using WebSockets. It focuses on full-stack architecture, security (JWT, hashing, XSS protection), APIs, and teamwork.\n\n---\n\n🎯 INSTRUCTIONS:\n\n1. Identify the project using {{$json.project_name}}.\n2. Use ONLY the matching description above.\n3. DO NOT invent unrelated concepts.\n\n---\n\n🚨 STRICT OUTPUT RULES (VERY IMPORTANT):\n\n- Output ONLY the final LinkedIn post\n- DO NOT say \"Here is your post\"\n- DO NOT add explanations\n- DO NOT add \"---\"\n- DO NOT wrap the answer in quotes\n- DO NOT add anything before or after the post\n\n---\n\n📌 FORMAT TO FOLLOW EXACTLY:\n\n🚀 ProjectName – Short impactful tagline 🖥️🔗  \n\nWrite a short engaging introduction (2–3 sentences max).\n\n💡 Key aspects of the project:  \n✅ 4–6 bullet points (technical, concrete, realistic)  \n\n🌍 What I learned:  \nWrite a strong paragraph with real technical learnings.\n\n📢 Hashtags:  \n#tag1 #tag2 #tag3 #tag4 #tag5\n\n---\n\nNow generate the post for:\n{{$json.project_name}}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        192,
+        -16
+      ],
+      "id": "8855c9f1-0578-4dcd-ba1c-d2abba29dc0e",
+      "name": "AI Agent",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "model": "llama3.1:latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        192,
+        240
+      ],
+      "id": "9f6c17ce-b050-46bc-9315-0c56b0f8b6a4",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        480,
+        -288
+      ],
+      "id": "b76eb81c-06e6-4bdc-90cb-f8a5f4d9a7e9",
+      "name": "Merge",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_DRIVE_FILE_ID",
+          "mode": "list",
+          "cachedResultName": "YOUR_PROJECT_IMAGE.png",
+          "cachedResultUrl": "https://drive.google.com/file/d/YOUR_GOOGLE_DRIVE_FILE_ID/view"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        672,
+        -144
+      ],
+      "id": "195840dc-434c-4b48-879e-4534e51a5d90",
+      "name": "Download file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "guildId": {
+          "__rl": true,
+          "value": "YOUR_DISCORD_SERVER_ID",
+          "mode": "list",
+          "cachedResultName": "YOUR_SERVER_NAME",
+          "cachedResultUrl": "https://discord.com/channels/YOUR_DISCORD_SERVER_ID"
+        },
+        "channelId": {
+          "__rl": true,
+          "value": "YOUR_DISCORD_CHANNEL_ID",
+          "mode": "list",
+          "cachedResultName": "general",
+          "cachedResultUrl": "https://discord.com/channels/YOUR_DISCORD_SERVER_ID/YOUR_DISCORD_CHANNEL_ID"
+        },
+        "content": "=🚀 New 42 project validated!\n\n📝 POST PREVIEW:\n{{$('AI Agent').item.json.output}}\n\n🖼️ Image is attached!\n\n✅ Approve:\n{{$execution.resumeUrl}}?action=approve\n\n❌ Regenerate:\n{{$execution.resumeUrl}}?action=reject",
+        "options": {},
+        "files": {
+          "values": [
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        864,
+        -48
+      ],
+      "id": "5a786cb9-190e-4d80-856d-982ab5d84bcd",
+      "name": "Send a message",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "discordBotApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Discord Bot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resume": "webhook",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1056,
+        80
+      ],
+      "id": "5998d115-81a2-4c10-b397-d2c61cd3fa23",
+      "name": "Wait",
+      "webhookId": "YOUR_WAIT_WEBHOOK_ID"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "0d33f3d9-bece-4cdb-bb0f-1877d9177af4",
+              "leftValue": "={{$json.query.action}}",
+              "rightValue": "approve",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1264,
+        -112
+      ],
+      "id": "f159be0d-8e86-4e32-9523-822d703cc53a",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/YOUR_LINKEDIN_PUBLISHER_WEBHOOK_ID",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"post_text\": {{ JSON.stringify($('AI Agent').item.json.output) }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1664,
+        -128
+      ],
+      "id": "738f569c-7b88-4226-bccd-55bc0e8b55eb",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/YOUR_REGENERATE_WEBHOOK_ID",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"project_name\": \"{{$json.project_name}}\",\n  \"final_mark\": \"{{$json.final_mark}}\",\n  \"marked_at\": \"{{$json.marked_at}}\",\n  \"project_id\": \"{{$json.project_id}}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1680,
+        80
+      ],
+      "id": "e0a9d18d-c9c3-4934-978b-a696af7ee122",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "YOUR_REGENERATE_WEBHOOK_ID",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -128,
+        320
+      ],
+      "id": "43bd80dc-606f-4305-b27a-35656064fe72",
+      "name": "Webhook",
+      "webhookId": "YOUR_REGENERATE_WEBHOOK_ID"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1472,
+        96
+      ],
+      "id": "7096eebc-6a5d-4630-b1fb-c7ea8ee2e6ac",
+      "name": "Merge1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Download file",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        []
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}
